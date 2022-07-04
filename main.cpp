@@ -2,7 +2,7 @@
 #include <cstring>
 #include <cassert>
 #include <cstdio>
-#include "vigenere.hpp"
+#include "vigenere.cpp"
 #include "types.hpp"
 
 ///
