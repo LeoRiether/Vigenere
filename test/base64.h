@@ -1,6 +1,6 @@
 #pragma once
 #include "../base64.cpp"
-#include "../types.h"
+#include "../types.hpp"
 #include <cxxtest/TestSuite.h>
 #include <random>
 #include <chrono>

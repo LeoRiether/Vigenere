@@ -2,16 +2,16 @@
 #include <cstring>
 #include <cassert>
 #include <cstdio>
-#include "types.h"
+#include "vigenere.hpp"
+#include "types.hpp"
 
-// It's a multiple of 3 and 4 so we can produce                                         
-// chunks of base64 
-// ~1.57MB                                                                              
-constexpr int CHUNK_SIZE = 3 * (1 << 19); 
+///
+/// Most of the cipher logic is in vigenere.cpp!
+///
 
 struct Args {
     char* key; // -k --key
-    char* key_file; // -kf --keyfile
+    char* key_file; // -kf --key-file
     char* input; // -i --input
     char* output; // -o --output
     bool b64_input, b64_output; // -i64, -o64
@@ -22,22 +22,22 @@ Args parse_args(int argc, char* argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-k") == 0 ||
                 strcmp(argv[i], "--key") == 0) {
-            assert(i+1 < argc);
+            assert(i+1 < argc && "--key should be followed by a key parameter");
             a.key = argv[++i];
         }
         else if (strcmp(argv[i], "-kf") == 0 ||
-                strcmp(argv[i], "--keyfile") == 0) {
-            assert(i+1 < argc);
+                strcmp(argv[i], "--key-file") == 0) {
+            assert(i+1 < argc && "--key-file should be followed by a keyfile parameter");
             a.key_file = argv[++i];
         }
         else if (strcmp(argv[i], "-i") == 0 ||
                 strcmp(argv[i], "--input") == 0) {
-            assert(i+1 < argc);
+            assert(i+1 < argc && "--input should be followed by a filename ");
             a.input = argv[++i];
         }
         else if (strcmp(argv[i], "-o") == 0 ||
                 strcmp(argv[i], "--out") == 0) {
-            assert(i+1 < argc);
+            assert(i+1 < argc && "--out should be followed by a filename");
             a.output = argv[++i];
         }
         else if (strcmp(argv[i], "-i64") == 0) {
@@ -50,27 +50,9 @@ Args parse_args(int argc, char* argv[]) {
     return a;
 }
 
-struct RollingKey {
-    const byte_t* base, *cur;
-    RollingKey(const byte_t* _base)
-        : base(_base), cur(_base) {}
-
-    byte_t next() {
-        if (*cur == 0)
-            cur = base;
-        return *(cur++);
-    }
-};
-
-void vigenere(RollingKey& key, byte_t* buf, int bufsz) {
-    for (int i = 0; i < bufsz; i++)
-        buf[i] ^= key.next(); // C is so concise sometimes
-}
-
 int main(int argc, char* argv[]) {
     auto args = parse_args(argc, argv);
 
-    // Open files
     FILE* fmessage;
     if (args.input)
         fmessage = fopen(args.input, "rb");
@@ -87,22 +69,34 @@ int main(int argc, char* argv[]) {
         fcipher = stdout;
     }
 
-    // Get a key 
-    byte_t key[] = "Hello World!";
-    RollingKey rolling_key(key);
-
-    // Cipher the message in chunks
-    byte_t* buffer = new byte_t[CHUNK_SIZE];
-    size_t bytes_read;
-    while ((bytes_read = fread(buffer, sizeof(*buffer), CHUNK_SIZE, fmessage)) > 0) {
-        vigenere(rolling_key, buffer, bytes_read);
-        fwrite(buffer, sizeof(*buffer), bytes_read, fcipher);
+    // Get a key
+    byte_t* key;
+    FILE* fkey = nullptr;
+    if (args.key) {
+        key = reinterpret_cast<byte_t*>(args.key);
+    } else if (args.key_file) {
+        fkey = fopen(args.key_file, "rb");
+        fseek(fkey, 0, SEEK_END); // thx stackoverflow
+        long long length = ftell(fkey);
+        fseek(fkey, 0, SEEK_SET);
+        key = new byte_t[length+1];
+        fread(key, sizeof(*key), length, fkey);
+    } else {
+        assert(false && "At least one of --key or --key-file must be present");
     }
 
-    // Free resources
-    delete[] buffer;
-    free(fmessage);
-    free(fcipher);
+    vigenere::cipher_file(
+        key, fmessage, fcipher,
+        args.b64_input, args.b64_output
+    );
+
+    // Close files
+    fclose(fmessage);
+    fclose(fcipher);
+    if (fkey) {
+        fclose(fkey);
+        delete[] key;
+    }
 
     return 0;
 }
