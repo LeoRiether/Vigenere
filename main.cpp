@@ -4,10 +4,10 @@
 #include <cstdio>
 #include "types.h"
 
-using std::ifstream;
-using std::ofstream;
-using std::istream;
-using std::ostream;
+// It's a multiple of 3 and 4 so we can produce                                         
+// chunks of base64 
+// ~1.57MB                                                                              
+constexpr int CHUNK_SIZE = 3 * (1 << 19); 
 
 struct Args {
     char* key; // -k --key
@@ -50,15 +50,21 @@ Args parse_args(int argc, char* argv[]) {
     return a;
 }
 
-void vigenere(byte_t* message, const byte_t* key) {
-    const byte_t* keyptr = key;
-    while (*message) {
-        // loop key back to beginning
-        if (*keyptr == 0)
-            keyptr = key;
+struct RollingKey {
+    const byte_t* base, *cur;
+    RollingKey(const byte_t* _base)
+        : base(_base), cur(_base) {}
 
-        *(message++) ^= *(keyptr++); // C is so concise sometimes
+    byte_t next() {
+        if (*cur == 0)
+            cur = base;
+        return *(cur++);
     }
+};
+
+void vigenere(RollingKey& key, byte_t* buf, int bufsz) {
+    for (int i = 0; i < bufsz; i++)
+        buf[i] ^= key.next(); // C is so concise sometimes
 }
 
 int main(int argc, char* argv[]) {
@@ -81,27 +87,22 @@ int main(int argc, char* argv[]) {
         fcipher = stdout;
     }
 
-    // Get file size
-    fseek(fmessage, 0, SEEK_END);
-    int length = ftell(fmessage);
-    fseek(fmessage, 0, SEEK_SET);
-
-    // Read fmessage into the message buffer
-    byte_t* message = (byte_t*)malloc(sizeof(*message) * (length+1)); 
-    fread(message, sizeof(*message), length, fmessage);
-    message[length] = 0;
-
-    // Make cipher in-place
+    // Get a key 
     byte_t key[] = "Hello World!";
-    vigenere(message, key);
+    RollingKey rolling_key(key);
 
-    // Write cipher to cipher file
-    fwrite(message, sizeof(*message), length, fcipher);
+    // Cipher the message in chunks
+    byte_t* buffer = new byte_t[CHUNK_SIZE];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, sizeof(*buffer), CHUNK_SIZE, fmessage)) > 0) {
+        vigenere(rolling_key, buffer, bytes_read);
+        fwrite(buffer, sizeof(*buffer), bytes_read, fcipher);
+    }
 
-    // Free everything
-    free(message);
-    fclose(fmessage);
-    fclose(fcipher);
+    // Free resources
+    delete[] buffer;
+    free(fmessage);
+    free(fcipher);
 
     return 0;
 }
