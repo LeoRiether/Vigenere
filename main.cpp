@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
         fseek(fkey, 0, SEEK_SET);
         key = new byte_t[length+1];
         fread(key, sizeof(*key), length, fkey);
+        key[length] = 0;
     } else {
         assert(false && "At least one of --key or --key-file must be present");
     }
