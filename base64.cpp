@@ -55,6 +55,7 @@ namespace base64 {
 
     // Decode `s` and put the output into `out`
     int decode(const string& s, byte_t* out) {
+        ensure_encoding_built();
         int p = 0;
         int n = s.size();
         for (int i = 0; i < n; i += 4) {
