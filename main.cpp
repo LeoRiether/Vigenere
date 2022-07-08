@@ -70,18 +70,22 @@ int main(int argc, char* argv[]) {
     }
 
     // Get a key
-    byte_t* key;
+    vector<byte_t> key;
     FILE* fkey = nullptr;
     if (args.key) {
-        key = reinterpret_cast<byte_t*>(args.key);
+        // Copy args.key to vector
+        char* p = args.key;
+        while (*p)
+            key.push_back(*(p++));
     } else if (args.key_file) {
+        // Read key from file
         fkey = fopen(args.key_file, "rb");
         fseek(fkey, 0, SEEK_END); // thx stackoverflow
         long long length = ftell(fkey);
         fseek(fkey, 0, SEEK_SET);
-        key = new byte_t[length+1];
-        fread(key, sizeof(*key), length, fkey);
-        key[length] = 0;
+        key.resize(length);
+        fread(key.data(), sizeof(*key.data()), length, fkey);
+        fclose(fkey);
     } else {
         assert(false && "At least one of --key or --key-file must be present");
     }
@@ -94,10 +98,6 @@ int main(int argc, char* argv[]) {
     // Close files
     fclose(fmessage);
     fclose(fcipher);
-    if (fkey) {
-        fclose(fkey);
-        delete[] key;
-    }
 
     return 0;
 }
