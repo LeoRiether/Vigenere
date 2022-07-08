@@ -43,18 +43,37 @@ namespace vigenere {
         const vector<byte_t>& key, FILE* fmessage, FILE* fcipher,
         bool b64_input, bool b64_output
     ) {
-
+        
         RollingKey rolling_key(key);
         vector<byte_t> buffer(CHUNK_SIZE+1);
         size_t bytes_read;
 
-        vector<byte_t> b64_buf = b64_input ? vector<byte_t>(CHUNK_SIZE+1) : vector<byte_t>();
+        vector<byte_t> b64_buf;
 
         while ((bytes_read = fread(buffer.data(), sizeof(*buffer.data()), CHUNK_SIZE, fmessage)) > 0) {
             buffer.resize(bytes_read);
+
+            // Decode base 64 input, if necessary
+            if (b64_input) {
+                base64::decode(buffer, b64_buf);
+                std::swap(buffer, b64_buf);
+            }
+
+            // Apply vigenere cipher to the current chunk
             cipher_chunk(rolling_key, buffer);
 
+            // Encode base 64 output, if necessary
+            if (b64_output) {
+                base64::encode(buffer, b64_buf);
+                std::swap(buffer, b64_buf);
+            }
+
+            // Write to output/cipher file
             fwrite(buffer.data(), sizeof(*buffer.data()), buffer.size(), fcipher);
+
+            // Make sure the buffer is big enough for the
+            // next iteration
+            buffer.resize(CHUNK_SIZE+1);
         }
     }
 }

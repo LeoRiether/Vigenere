@@ -59,21 +59,20 @@ namespace base64 {
     }
 
     // Decode `s` and put the output into `out`
-    void decode(const vector<byte_t> input, vector<byte_t>& output) {
+    void decode(const vector<byte_t>& input, vector<byte_t>& output) {
         ensure_encoding_built();
         long n = input.size();
         output.resize(0);
-        long p = 0;
         for (int i = 0; i < n; i += 4) {
             // Inverse of the `encode` mapping
             auto at = [&](int j) { return inv_encoding[(int)input[j]]; };
-            output[p++] = (at(i) << 2) | (at(i+1) >> 4);
+            output.push_back((at(i) << 2) | (at(i+1) >> 4));
 
             if (input[i+2] != '=')
-                output[p++] = ((at(i+1) & 15) << 4) | (at(i+2) >> 2);
+                output.push_back(((at(i+1) & 15) << 4) | (at(i+2) >> 2));
 
             if (input[i+3] != '=')
-                output[p++] = ((at(i+2) & 3) << 6) | at(i+3);
+                output.push_back(((at(i+2) & 3) << 6) | at(i+3));
         }
     }
 }

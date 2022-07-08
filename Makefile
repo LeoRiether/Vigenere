@@ -6,7 +6,7 @@ CC=g++
 all: main test
 
 main: main.cpp
-	$(CC) -o bin/main main.cpp
+	$(CC) -o bin/main -Wall -fsanitize=address,undefined main.cpp
 
 test: bin/test
 	./bin/test
