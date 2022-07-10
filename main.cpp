@@ -27,38 +27,36 @@ struct Args {
     bool b64_input, b64_output; // -i64, -o64
 };
 
+#define IS(x, y) strcmp(x, y) == 0
 Args parse_args(int argc, char* argv[]) {
     Args a{ 0 };
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-k") == 0 ||
-                strcmp(argv[i], "--key") == 0) {
+        if (IS(argv[i], "-k") || IS(argv[i], "--key")) {
             assert(i+1 < argc && "--key should be followed by a key parameter");
             a.key = argv[++i];
         }
-        else if (strcmp(argv[i], "-kf") == 0 ||
-                strcmp(argv[i], "--key-file") == 0) {
+        else if (IS(argv[i], "-kf") || IS(argv[i], "--key-file")) {
             assert(i+1 < argc && "--key-file should be followed by a keyfile parameter");
             a.key_file = argv[++i];
         }
-        else if (strcmp(argv[i], "-i") == 0 ||
-                strcmp(argv[i], "--input") == 0) {
+        else if (IS(argv[i], "-i") || IS(argv[i], "--input")) {
             assert(i+1 < argc && "--input should be followed by a filename ");
             a.input = argv[++i];
         }
-        else if (strcmp(argv[i], "-o") == 0 ||
-                strcmp(argv[i], "--out") == 0) {
+        else if (IS(argv[i], "-o") || IS(argv[i], "--out")) {
             assert(i+1 < argc && "--out should be followed by a filename");
             a.output = argv[++i];
         }
-        else if (strcmp(argv[i], "-i64") == 0) {
+        else if (IS(argv[i], "-i64")) {
             a.b64_input = true;
         }
-        else if (strcmp(argv[i], "-o64") == 0) {
+        else if (IS(argv[i], "-o64")) {
             a.b64_output = true;
         }
     }
     return a;
 }
+#undef IS
 
 int main(int argc, char* argv[]) {
     auto args = parse_args(argc, argv);
