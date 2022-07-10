@@ -5,6 +5,16 @@
 #include "vigenere.cpp"
 #include "types.hpp"
 
+// Sets a file handle to binary mode  
+// https://stackoverflow.com/a/1613677
+#ifdef _WIN32
+# include <io.h>
+# include <fcntl.h>
+# define SET_BINARY_MODE(handle) setmode(handle, O_BINARY)
+#else
+# define SET_BINARY_MODE(handle) ((void)0)
+#endif
+
 ///
 /// Most of the cipher logic is in vigenere.cpp!
 ///
@@ -57,15 +67,15 @@ int main(int argc, char* argv[]) {
     if (args.input)
         fmessage = fopen(args.input, "rb");
     else {
-        freopen(NULL, "rb", stdin); // reopen stdin in binary mode
+        SET_BINARY_MODE(stdin);
         fmessage = stdin;
     }
 
     FILE* fcipher;
-    if (args.input)
+    if (args.output)
         fcipher = fopen(args.output, "wb");
     else {
-        freopen(NULL, "wb", stdout); // reopen stdout in binary mode
+        SET_BINARY_MODE(stdout);
         fcipher = stdout;
     }
 
