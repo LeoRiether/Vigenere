@@ -1,6 +1,7 @@
-#include "util.cpp"
+// Includes {{{ 
 #include "pollard_rho.cpp"
 #include "types.hpp"
+#include "util.cpp"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -9,17 +10,20 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+// }}}
 
 using std::vector;
 using std::string;
 using std::unordered_map;
 using std::map;
 
-// {{{ Arg parser
+// Arg parser {{{
 struct Args {
     char* input; // -i --input
     char* output; // -o --output
@@ -49,10 +53,12 @@ Args parse_args(int argc, char* argv[]) {
 #undef IS
 /// }}}
 
-// {{{ Score Table
+// Score Tables  {{
+using score_table_t = std::unordered_map<byte_t, int>;
+
 // From
 // https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
-std::unordered_map<byte_t, int> score_table = {
+score_table_t english_score = {
     { 'A', 4331 }, { 'B', 1056 }, { 'C', 2313 },
     { 'D', 1725 }, { 'E', 5688 }, { 'F', 924 },
     { 'G', 1259 }, { 'H', 1531 }, { 'I', 3845 },
@@ -63,13 +69,16 @@ std::unordered_map<byte_t, int> score_table = {
     { 'V', 513 }, { 'W', 657 }, { 'X', 148 },
     { 'Y', 906 }, { 'Z', 139 }, { ' ', 50 }
 };
+
 // }}}
 
-// {{{ KeyFinder
+// KeyFinder {{{
 struct KeyFinder {
     const vector<byte_t>& cipher;
-    KeyFinder(const vector<byte_t>& _cipher)
-        : cipher(_cipher) {}
+    const score_table_t& scoring;
+
+    KeyFinder(const vector<byte_t>& _cipher, const score_table_t& _scoring)
+        : cipher(_cipher), scoring(_scoring) {}
 
     // Finds the k most likely key lengths {{{
     vector<int> most_likely_lengths(int k) {
@@ -96,7 +105,7 @@ struct KeyFinder {
             last_occurence[s] = i;
         }
 
-        // Sort entries to get the k most frequent deltas 
+        // Sort entries to get the k most frequent deltas
         vector<std::pair<int, int>> vdelta(deltas.size());
         {
             int i = 0;
@@ -141,8 +150,9 @@ struct KeyFinder {
                     if (b >= 'a' && b <= 'z')
                         b = b - 'a' + 'A';
 
-                    if (score_table.count(b))
-                        score[candidate] += score_table[b];
+                    auto it = scoring.find(b);
+                    if (it != scoring.end())
+                        score[candidate] += it->second;
                 }
             }
 
@@ -161,9 +171,9 @@ int main(int argc, char* argv[]) {
     assert(args.input && "--input flag must be present");
 
     vector<byte_t> cipher = read_all_bytes(args.input);
-    KeyFinder findkey(cipher);
+    KeyFinder findkey(cipher, english_score);
 
-    // {{{ Find most likely key lengths
+    // Find most likely key lengths {{{
     std::cerr << "Most likely lengths: ";
     auto likely_lengths = findkey.most_likely_lengths(args.lengths);
     for (auto x : likely_lengths)
@@ -171,28 +181,54 @@ int main(int argc, char* argv[]) {
     std::cerr << std::endl;
     // }}}
 
-    // {{{ Find most likely key for each length
-    vector<KeyFinder::Result> results; 
-    for (auto len : likely_lengths) {
-        std::cerr << "Finding key with length " << len
-                  << "...";
+    // Find most likely key for each length {{{
+    vector<KeyFinder::Result> results;
+    std::mutex mutex; // too lazy to research how to properly use
+                      // mutexes in C++, this'll do
 
+    auto locked = [&](auto&& f) {
+        mutex.lock();
+        f();
+        mutex.unlock();
+    };
+    
+    // Find the most likely key for some particular length `len` {{{
+    auto process_len = [&](int len) {
+        locked([&]() {
+            std::cerr << "Finding key with length " << len
+                      << "..." << std::endl;
+        });
+
+        // Potentially takes a lot of time
         auto result = findkey.with_length(len);
 
-        std::cerr << " (score = " << log(result.score) / log(1.15) << ")" << std::endl;
-        if (is_readable(result.key)) {
-            for (auto b : result.key)
-                std::cerr << b;
-            std::cerr << std::endl;
-        } else {
-            std::cerr << "<unreadable>" << std::endl;
-        }
+        locked([&]() {
+            std::cerr << "len " << len <<  " scored "
+                      << log(result.score) / log(1.15)
+                      << std::endl;
 
-        results.emplace_back(std::move(result));
-    }
+            if (is_readable(result.key)) {
+                for (auto b : result.key)
+                    std::cerr << b;
+                std::cerr << std::endl;
+            } else {
+                std::cerr << "<unreadable>" << std::endl;
+            }
+
+            results.emplace_back(std::move(result));
+        });
+    };
+    /// }}}
+
+    // Process each length in a different thread
+    vector<std::thread> handles;
+    for (auto len : likely_lengths)
+        handles.push_back(std::thread(process_len, len));
+    for (auto& handle : handles)
+        handle.join();
     // }}}
 
-    // {{{ Output the result that scored better
+    // Output the result that scored better {{{
     FILE* fout;
     if (args.output)
         fout = fopen(args.output, "wb");
