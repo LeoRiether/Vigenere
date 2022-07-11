@@ -14,21 +14,21 @@ private:
 
         // Initialize random string
         int n = gen(rnd);
-        byte_t buf[n+1];
+        vector<byte_t> input(n);
         for (int i = 0; i < n; i++)
-            buf[i] = gen(rnd);
-        buf[n] = 0;
+            input[i] = gen(rnd);
 
         // Encode it in base64
-        auto encoded = base64::encode(buf, n);
+        vector<byte_t> encoded;
+        base64::encode(input, encoded);
 
         // Decode it
-        byte_t out[n+1];
-        int m = base64::decode(encoded, out);
+        vector<byte_t> output;
+        base64::decode(encoded, output);
 
-        TS_ASSERT_EQUALS(n, m);
-        for (int i = 0; i < n; i++)
-            TS_ASSERT_EQUALS(buf[i], out[i]);
+        TS_ASSERT_EQUALS(input.size(), output.size());
+        for (size_t i = 0; i < input.size(); i++)
+            TS_ASSERT_EQUALS(input[i], output[i]);
     }
 public:
     Base64TestSuite() {

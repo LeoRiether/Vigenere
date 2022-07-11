@@ -58,11 +58,11 @@ namespace base64 {
         }
     }
 
-    // Decode `s` and put the output into `out`
+    // Decode `input` and put the output into `output`
     void decode(const vector<byte_t>& input, vector<byte_t>& output) {
         ensure_encoding_built();
         long n = input.size();
-        output.resize(0);
+        output.clear();
         for (int i = 0; i < n; i += 4) {
             // Inverse of the `encode` mapping
             auto at = [&](int j) { return inv_encoding[(int)input[j]]; };
