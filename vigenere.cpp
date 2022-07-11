@@ -8,9 +8,9 @@
 
 using std::vector;
 
-namespace vigenere {
+namespace vigenere { // {{{
 
-    // Thing that gives me the next byte of the key
+    // Thing that gives me the next byte of the key {{{
     // and loops it back every time it needs to
     struct RollingKey {
         const vector<byte_t>& key;
@@ -24,19 +24,21 @@ namespace vigenere {
             return key[i++]; // return current key byte and advance pointer
         }
     };
+    // }}}
 
     // It's a multiple of 3 and 4 so we can produce
     // chunks of base64
     // ~1.57MB
     constexpr int CHUNK_SIZE = 3 * (1 << 19);
 
-    // Cipher a chunk of a buffer
+    // Cipher a chunk of a buffer {{{
     void cipher_chunk(RollingKey& key, vector<byte_t>& buf) {
         for (auto& byte : buf)
             byte ^= key.next();
     }
+    // }}}
 
-    // Cipher the message in chunks
+    // Cipher the message in chunks {{{
     // The input and output files are encoded/decoded in base64
     // when appropriate (TODO:)
     void cipher_file(
@@ -76,4 +78,5 @@ namespace vigenere {
             buffer.resize(CHUNK_SIZE+1);
         }
     }
-}
+    // }}}
+} // }}}

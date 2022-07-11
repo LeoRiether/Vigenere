@@ -53,7 +53,7 @@ Args parse_args(int argc, char* argv[]) {
 #undef IS
 /// }}}
 
-// Score Tables  {{
+// Score Tables {{{
 using score_table_t = std::unordered_map<byte_t, int>;
 
 // From
