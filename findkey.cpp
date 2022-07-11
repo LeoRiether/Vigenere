@@ -1,11 +1,17 @@
+#include "pollard_rho.cpp"
 #include "types.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
+#include <string>
+#include <tuple>
+#include <unordered_map>
 #include <unordered_map>
 #include <vector>
 
 using std::vector;
+using std::string;
+using std::unordered_map;
 
 // From
 // https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
@@ -21,11 +27,13 @@ std::unordered_map<byte_t, int> score_table = {
     { 'Y', 906 }, { 'Z', 139 }, { ' ', 50 }
 };
 
+// {{{ KeyFinder
 struct KeyFinder {
     const vector<byte_t>& cipher;
     KeyFinder(const vector<byte_t>& _cipher)
         : cipher(_cipher) {}
 
+    // (I'm not actually using this procedure)
     // Builds a histogram/frequency table for every
     // k-th byte of the cipher, starting at index `start`
     vector<int> build_histogram(int start, int k) {
@@ -38,13 +46,60 @@ struct KeyFinder {
         return hist;
     }
 
+    // Finds the k most likely key lengths
+    vector<int> most_likely_lengths(int k) {
+        unordered_map<string, int> last_occurence;
+        unordered_map<int, int> deltas;
+        unordered_map<int, vector<long long>> divisor_cache;
+        int n = cipher.size();
+        string s(3, 0);
+        for (int i = 0; i+2 < n; i++) {
+            s[0] = cipher[i];
+            s[1] = cipher[i+1];
+            s[2] = cipher[i+2];
+
+            if (last_occurence.count(s)) {
+                int delta = i - last_occurence[s];
+                if (!divisor_cache.count(delta))
+                    divisor_cache[delta] = divisors(delta);
+
+                for (auto d : divisor_cache[delta]) {
+                    if (d != 1)
+                        deltas[d]++;
+                }
+            }
+
+            last_occurence[s] = i;
+        }
+
+        vector<std::pair<int, int>> vdelta(deltas.size());
+        {
+            int i = 0;
+            for (const auto& [delta, cnt] : deltas)
+                vdelta[i++] = { cnt, delta };
+            std::sort(vdelta.rbegin(), vdelta.rend());
+        }
+
+        vector<int> likely;
+        for (const auto& entry : vdelta) {
+            if ((int)likely.size() >= k) break;
+            likely.push_back(entry.second);
+        }
+        return likely;
+    }
+
+    struct Result {
+        long long score;
+        vector<byte_t> key;
+    };
+
     // Finds the most likely key with length k
     // based on some scoring function
-    vector<byte_t> with_length(int k) {
+    Result with_length(int k) {
         vector<byte_t> guess(k);
+        long long total_score = 0;
         vector<long long> score;
         for (int i = 0; i < k; i++) {
-            std::cerr << "i = " << i << std::endl;
             score.assign(256, 0);
             int n = cipher.size();
             for (int j = i; j < n; j += k) {
@@ -59,11 +114,13 @@ struct KeyFinder {
             }
 
             byte_t best = std::max_element(score.begin(), score.end()) - score.begin();
+            total_score += score[best];
             guess[i] = best;
         }
-        return guess;
+        return { total_score, guess };
     }
 };
+// }}}
 
 int main(int argc, char* argv[]) {
 
@@ -80,13 +137,23 @@ int main(int argc, char* argv[]) {
     fread(cipher.data(), sizeof(*cipher.data()), length, fcipher);
     fclose(fcipher);
 
-    std::cerr << "Finding key..." << std::endl;
 
     KeyFinder findkey(cipher);
-    auto key = findkey.with_length(12);
-    for (auto b : key)
-        std::cout << char(b);
-    std::cout << std::endl;
+    std::cerr << "Most likely lengths: ";
+    auto likely_lengths = findkey.most_likely_lengths(6); 
+    for (auto x : likely_lengths)
+        std::cerr << x << ' ';
+    std::cerr << std::endl;
+
+    for (auto len : likely_lengths) {
+        std::cerr << "Finding key with length " << len
+                  << "..." << std::endl;
+
+        auto result = findkey.with_length(len);
+        for (auto b : result.key)
+            std::cout << char(b);
+        std::cerr << std::endl << "(score = " << result.score << ")" << std::endl;
+    }
 
     return 0;
 }
