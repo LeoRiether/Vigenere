@@ -1,5 +1,6 @@
 // Includes {{{ 
 #include "pollard_rho.cpp"
+#include "scoring.cpp"
 #include "types.hpp"
 #include "util.cpp"
 #include <algorithm>
@@ -44,33 +45,22 @@ Args parse_args(int argc, char* argv[]) {
             a.output = argv[++i];
         }
         else if (IS(argv[i], "-l") || IS(argv[i], "--lengths")) {
-            assert(i+1 < argc && "--lengths should be followed by a filename ");
+            assert(i+1 < argc && "--lengths should be followed by a number");
             a.lengths = atoi(argv[++i]);
+        }
+        else if (IS(argv[i], "-min")) {
+            assert(i+1 < argc && "-min should be followed by a number");
+            a.min = atoi(argv[++i]);
+        }
+        else if (IS(argv[i], "-max")) {
+            assert(i+1 < argc && "-max should be followed by a number");
+            a.max = atoi(argv[++i]);
         }
     }
     return a;
 }
 #undef IS
 /// }}}
-
-// Score Tables {{{
-using score_table_t = std::unordered_map<byte_t, int>;
-
-// From
-// https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
-score_table_t english_score = {
-    { 'A', 4331 }, { 'B', 1056 }, { 'C', 2313 },
-    { 'D', 1725 }, { 'E', 5688 }, { 'F', 924 },
-    { 'G', 1259 }, { 'H', 1531 }, { 'I', 3845 },
-    { 'J', 100 }, { 'K', 561 }, { 'L', 2798 },
-    { 'M', 1536 }, { 'N', 3392 }, { 'O', 3651 },
-    { 'P', 1614 }, { 'Q', 100 }, { 'R', 3864 },
-    { 'S', 2923 }, { 'T', 3543 }, { 'U', 1851 },
-    { 'V', 513 }, { 'W', 657 }, { 'X', 148 },
-    { 'Y', 906 }, { 'Z', 139 }, { ' ', 50 }
-};
-
-// }}}
 
 // KeyFinder {{{
 struct KeyFinder {
