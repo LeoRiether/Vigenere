@@ -1,3 +1,4 @@
+#include "util.cpp"
 #include "pollard_rho.cpp"
 #include "types.hpp"
 #include <algorithm>
@@ -13,6 +14,7 @@ using std::vector;
 using std::string;
 using std::unordered_map;
 
+// {{{ Score Table
 // From
 // https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
 std::unordered_map<byte_t, int> score_table = {
@@ -26,6 +28,7 @@ std::unordered_map<byte_t, int> score_table = {
     { 'V', 513 }, { 'W', 657 }, { 'X', 148 },
     { 'Y', 906 }, { 'Z', 139 }, { ' ', 50 }
 };
+// }}}
 
 // {{{ KeyFinder
 struct KeyFinder {
@@ -124,19 +127,7 @@ struct KeyFinder {
 
 int main(int argc, char* argv[]) {
 
-    vector<byte_t> cipher;
-
-    std::cerr << "Reading cipher file..." << std::endl;
-
-    // TODO: extract into a function
-    FILE* fcipher = fopen("examples/shakespeare.cipher", "rb");
-    fseek(fcipher, 0, SEEK_END); // thx stackoverflow
-    long long length = ftell(fcipher);
-    fseek(fcipher, 0, SEEK_SET);
-    cipher.resize(length);
-    fread(cipher.data(), sizeof(*cipher.data()), length, fcipher);
-    fclose(fcipher);
-
+    vector<byte_t> cipher = read_all_bytes("examples/shakespeare.cipher");
 
     KeyFinder findkey(cipher);
     std::cerr << "Most likely lengths: ";
@@ -150,9 +141,10 @@ int main(int argc, char* argv[]) {
                   << "..." << std::endl;
 
         auto result = findkey.with_length(len);
+        SET_BINARY_MODE(stdout);
         for (auto b : result.key)
-            std::cout << char(b);
-        std::cerr << std::endl << "(score = " << result.score << ")" << std::endl;
+            fwrite(&b, sizeof(b), 1, stdout);
+        std::cerr << " (score = " << result.score << ")" << std::endl;
     }
 
     return 0;

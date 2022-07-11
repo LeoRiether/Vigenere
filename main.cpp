@@ -1,19 +1,10 @@
-#include <iostream>
-#include <cstring>
+#include "types.hpp"
+#include "util.cpp"
+#include "vigenere.cpp"
 #include <cassert>
 #include <cstdio>
-#include "vigenere.cpp"
-#include "types.hpp"
-
-// Sets a file handle to binary mode  
-// https://stackoverflow.com/a/1613677
-#ifdef _WIN32
-# include <io.h>
-# include <fcntl.h>
-# define SET_BINARY_MODE(handle) setmode(handle, O_BINARY)
-#else
-# define SET_BINARY_MODE(handle) ((void)0)
-#endif
+#include <cstring>
+#include <iostream>
 
 ///
 /// Most of the cipher logic is in vigenere.cpp!
@@ -89,13 +80,7 @@ int main(int argc, char* argv[]) {
             key.push_back(*(p++));
     } else if (args.key_file) {
         // Read key from file
-        FILE* fkey = fopen(args.key_file, "rb");
-        fseek(fkey, 0, SEEK_END); // thx stackoverflow
-        long long length = ftell(fkey);
-        fseek(fkey, 0, SEEK_SET);
-        key.resize(length);
-        fread(key.data(), sizeof(*key.data()), length, fkey);
-        fclose(fkey);
+        key = read_all_bytes(args.key_file);
     } else {
         assert(false && "At least one of --key or --key-file must be present");
     }
