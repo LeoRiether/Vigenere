@@ -79,7 +79,6 @@ int main(int argc, char* argv[]) {
 
     // Get a key
     vector<byte_t> key;
-    FILE* fkey = nullptr;
     if (args.key) {
         // Copy args.key to vector
         char* p = args.key;
@@ -87,7 +86,7 @@ int main(int argc, char* argv[]) {
             key.push_back(*(p++));
     } else if (args.key_file) {
         // Read key from file
-        fkey = fopen(args.key_file, "rb");
+        FILE* fkey = fopen(args.key_file, "rb");
         fseek(fkey, 0, SEEK_END); // thx stackoverflow
         long long length = ftell(fkey);
         fseek(fkey, 0, SEEK_SET);

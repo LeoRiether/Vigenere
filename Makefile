@@ -2,11 +2,15 @@
 
 BIN=bin
 CC=g++
+FLAGS=-Wall -fsanitize=address,undefined
 
 all: main test
 
 main: main.cpp
-	$(CC) -o bin/main -Wall -fsanitize=address,undefined main.cpp
+	$(CC) $(FLAGS) -o bin/main main.cpp
+
+findkey: findkey.cpp
+	$(CC) $(FLAGS) -o bin/findkey findkey.cpp
 
 test: bin/test
 	./bin/test
