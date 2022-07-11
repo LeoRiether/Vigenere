@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <string>
@@ -29,12 +30,16 @@ struct Args {
     char* input; // -i --input
     char* output; // -o --output
     int lengths; // -l --lengths
+    int min; // -min (minimum key length)
+    int max; // -max (maximum key length)
 };
 
 #define IS(x, y) strcmp(x, y) == 0
 Args parse_args(int argc, char* argv[]) {
     Args a{ 0 };
     a.lengths = 10;
+    a.min = 0;
+    a.max = std::numeric_limits<int>::max();
     for (int i = 1; i < argc; i++) {
         if (IS(argv[i], "-i") || IS(argv[i], "--input")) {
             assert(i+1 < argc && "--input should be followed by a filename ");
@@ -71,7 +76,11 @@ struct KeyFinder {
         : cipher(_cipher), scoring(_scoring) {}
 
     // Finds the k most likely key lengths {{{
-    vector<int> most_likely_lengths(int k) {
+    // Excludes lengths < th
+    vector<int> most_likely_lengths(
+            int k, int min = 0,
+            int max = std::numeric_limits<int>::max()
+    ) {
         using byte3 = std::array<byte_t, 3>;
         map<byte3, int> last_occurence;
         unordered_map<int, int> deltas;
@@ -107,7 +116,11 @@ struct KeyFinder {
         // Put the k most frequent deltas into the `likely` vector
         vector<int> likely;
         for (const auto& entry : vdelta) {
-            if ((int)likely.size() >= k) break;
+            if (entry.second < min || entry.second > max)
+                continue;
+            if ((int)likely.size() >= k)
+                break;
+
             likely.push_back(entry.second);
         }
         return likely;
@@ -125,7 +138,7 @@ struct KeyFinder {
         }
     };
 
-    // Finds the most likely key with length k
+    // Finds the most likely key with length k {{{
     // based on some scoring function
     Result with_length(int k) {
         vector<byte_t> guess(k);
@@ -152,6 +165,7 @@ struct KeyFinder {
         }
         return { total_score, guess };
     }
+    // }}}
 };
 // }}}
 
@@ -165,7 +179,7 @@ int main(int argc, char* argv[]) {
 
     // Find most likely key lengths {{{
     std::cerr << "Most likely lengths: ";
-    auto likely_lengths = findkey.most_likely_lengths(args.lengths);
+    auto likely_lengths = findkey.most_likely_lengths(args.lengths, args.min, args.max);
     for (auto x : likely_lengths)
         std::cerr << x << ' ';
     std::cerr << std::endl;
