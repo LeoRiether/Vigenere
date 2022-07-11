@@ -6,10 +6,10 @@ FLAGS=-Wall -fsanitize=address,undefined
 
 all: main test
 
-main: main.cpp
+main: *.cpp
 	$(CC) $(FLAGS) -o bin/main main.cpp
 
-findkey: findkey.cpp
+findkey: *.cpp
 	$(CC) $(FLAGS) -o bin/findkey findkey.cpp
 
 test: bin/test
