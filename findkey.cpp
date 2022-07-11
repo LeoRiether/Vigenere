@@ -39,10 +39,12 @@ struct KeyFinder {
     }
 
     // Finds the most likely key with length k
+    // based on some scoring function
     vector<byte_t> with_length(int k) {
         vector<byte_t> guess(k);
         vector<long long> score;
         for (int i = 0; i < k; i++) {
+            std::cerr << "i = " << i << std::endl;
             score.assign(256, 0);
             int n = cipher.size();
             for (int j = i; j < n; j += k) {
@@ -63,8 +65,28 @@ struct KeyFinder {
     }
 };
 
-
 int main(int argc, char* argv[]) {
+
+    vector<byte_t> cipher;
+
+    std::cerr << "Reading cipher file..." << std::endl;
+
+    // TODO: extract into a function
+    FILE* fcipher = fopen("examples/shakespeare.cipher", "rb");
+    fseek(fcipher, 0, SEEK_END); // thx stackoverflow
+    long long length = ftell(fcipher);
+    fseek(fcipher, 0, SEEK_SET);
+    cipher.resize(length);
+    fread(cipher.data(), sizeof(*cipher.data()), length, fcipher);
+    fclose(fcipher);
+
+    std::cerr << "Finding key..." << std::endl;
+
+    KeyFinder findkey(cipher);
+    auto key = findkey.with_length(12);
+    for (auto b : key)
+        std::cout << char(b);
+    std::cout << std::endl;
 
     return 0;
 }
