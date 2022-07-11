@@ -2,17 +2,52 @@
 #include "pollard_rho.cpp"
 #include "types.hpp"
 #include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
+#include <map>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <unordered_map>
 #include <vector>
 
 using std::vector;
 using std::string;
 using std::unordered_map;
+using std::map;
+
+// {{{ Arg parser
+struct Args {
+    char* input; // -i --input
+    char* output; // -o --output
+    int lengths; // -l --lengths
+};
+
+#define IS(x, y) strcmp(x, y) == 0
+Args parse_args(int argc, char* argv[]) {
+    Args a{ 0 };
+    a.lengths = 10;
+    for (int i = 1; i < argc; i++) {
+        if (IS(argv[i], "-i") || IS(argv[i], "--input")) {
+            assert(i+1 < argc && "--input should be followed by a filename ");
+            a.input = argv[++i];
+        }
+        else if (IS(argv[i], "-o") || IS(argv[i], "--output")) {
+            assert(i+1 < argc && "--output should be followed by a filename ");
+            a.output = argv[++i];
+        }
+        else if (IS(argv[i], "-l") || IS(argv[i], "--lengths")) {
+            assert(i+1 < argc && "--lengths should be followed by a filename ");
+            a.lengths = atoi(argv[++i]);
+        }
+    }
+    return a;
+}
+#undef IS
+/// }}}
 
 // {{{ Score Table
 // From
@@ -36,30 +71,16 @@ struct KeyFinder {
     KeyFinder(const vector<byte_t>& _cipher)
         : cipher(_cipher) {}
 
-    // (I'm not actually using this procedure)
-    // Builds a histogram/frequency table for every
-    // k-th byte of the cipher, starting at index `start`
-    vector<int> build_histogram(int start, int k) {
-        int n = cipher.size();
-        vector<int> hist(256);
-        for (int i = start; i < n; i += k) {
-            int byte = cipher[i];
-            hist[byte]++;
-        }
-        return hist;
-    }
-
-    // Finds the k most likely key lengths
+    // Finds the k most likely key lengths {{{
     vector<int> most_likely_lengths(int k) {
-        unordered_map<string, int> last_occurence;
+        using byte3 = std::array<byte_t, 3>;
+        map<byte3, int> last_occurence;
         unordered_map<int, int> deltas;
         unordered_map<int, vector<long long>> divisor_cache;
         int n = cipher.size();
-        string s(3, 0);
+        byte3 s;
         for (int i = 0; i+2 < n; i++) {
-            s[0] = cipher[i];
-            s[1] = cipher[i+1];
-            s[2] = cipher[i+2];
+            s = { cipher[i], cipher[i+1], cipher[i+2] };
 
             if (last_occurence.count(s)) {
                 int delta = i - last_occurence[s];
@@ -75,6 +96,7 @@ struct KeyFinder {
             last_occurence[s] = i;
         }
 
+        // Sort entries to get the k most frequent deltas 
         vector<std::pair<int, int>> vdelta(deltas.size());
         {
             int i = 0;
@@ -83,6 +105,7 @@ struct KeyFinder {
             std::sort(vdelta.rbegin(), vdelta.rend());
         }
 
+        // Put the k most frequent deltas into the `likely` vector
         vector<int> likely;
         for (const auto& entry : vdelta) {
             if ((int)likely.size() >= k) break;
@@ -90,10 +113,17 @@ struct KeyFinder {
         }
         return likely;
     }
+    // }}}
 
     struct Result {
         long long score;
         vector<byte_t> key;
+
+        bool operator>(const Result& rhs) const {
+            if (score != rhs.score)
+                return score > rhs.score;
+            return key.size() < rhs.key.size();
+        }
     };
 
     // Finds the most likely key with length k
@@ -127,25 +157,59 @@ struct KeyFinder {
 
 int main(int argc, char* argv[]) {
 
-    vector<byte_t> cipher = read_all_bytes("examples/shakespeare.cipher");
+    Args args = parse_args(argc, argv);
+    assert(args.input && "--input flag must be present");
 
+    vector<byte_t> cipher = read_all_bytes(args.input);
     KeyFinder findkey(cipher);
+
+    // {{{ Find most likely key lengths
     std::cerr << "Most likely lengths: ";
-    auto likely_lengths = findkey.most_likely_lengths(6); 
+    auto likely_lengths = findkey.most_likely_lengths(args.lengths);
     for (auto x : likely_lengths)
         std::cerr << x << ' ';
     std::cerr << std::endl;
+    // }}}
 
+    // {{{ Find most likely key for each length
+    vector<KeyFinder::Result> results; 
     for (auto len : likely_lengths) {
         std::cerr << "Finding key with length " << len
-                  << "..." << std::endl;
+                  << "...";
 
         auto result = findkey.with_length(len);
-        SET_BINARY_MODE(stdout);
-        for (auto b : result.key)
-            fwrite(&b, sizeof(b), 1, stdout);
-        std::cerr << " (score = " << result.score << ")" << std::endl;
+
+        std::cerr << " (score = " << log(result.score) / log(1.15) << ")" << std::endl;
+        if (is_readable(result.key)) {
+            for (auto b : result.key)
+                std::cerr << b;
+            std::cerr << std::endl;
+        } else {
+            std::cerr << "<unreadable>" << std::endl;
+        }
+
+        results.emplace_back(std::move(result));
     }
+    // }}}
+
+    // {{{ Output the result that scored better
+    FILE* fout;
+    if (args.output)
+        fout = fopen(args.output, "wb");
+    else {
+        SET_BINARY_MODE(stdout);
+        fout = stdout;
+    }
+
+    auto best = results[0];
+    for (const auto& r : results) {
+        if (r > best)
+            best = r;
+    }
+    fwrite(best.key.data(), sizeof(byte_t), best.key.size(), fout);
+    // }}}
+
+    fclose(fout);
 
     return 0;
 }

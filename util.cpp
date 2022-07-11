@@ -28,3 +28,11 @@ std::vector<byte_t> read_all_bytes(const char* filename) {
     fclose(file);
     return buf; 
 }
+
+bool is_readable(const std::vector<byte_t>& v) {
+    bool ans = true;
+    for (auto b : v)
+        ans &= (b >= 32 && b < 127) ||
+                b == '\n' || b == '\t';
+    return ans;
+}
