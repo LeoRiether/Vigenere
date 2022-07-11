@@ -2,7 +2,7 @@
 
 BIN=bin
 CC=g++
-FLAGS=-Wall -fsanitize=address,undefined
+FLAGS=-std=c++17 -Wall -fsanitize=address,undefined -O2
 
 all: main test
 
