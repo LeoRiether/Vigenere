@@ -10,7 +10,7 @@
 /// Most of the cipher logic is in vigenere.cpp!
 ///
 
-// {{{ Arg parser
+// Arg parser  {{
 struct Args {
     char* key; // -k --key
     char* key_file; // -kf --key-file
@@ -54,7 +54,7 @@ Args parse_args(int argc, char* argv[]) {
 int main(int argc, char* argv[]) {
     auto args = parse_args(argc, argv);
 
-    // {{{ Read input, cipher and key
+    // Read input, cipher and key  {{
     FILE* fmessage;
     if (args.input)
         fmessage = fopen(args.input, "rb");
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
         args.b64_input, args.b64_output
     );
 
-    // {{{ Close files
+    // Close files  {{
     fclose(fmessage);
     fclose(fcipher);
     // }}}

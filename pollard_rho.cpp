@@ -5,7 +5,7 @@
 using ll = long long;
 using ld = long double;
 
-// {{{ Pollard-Rho implementation
+// Pollard-Rho implementation  {{{
 // Ok I just copied this from
 // https://github.com/Tiagosf00/Competitive-Programming/blob/master/C%2B%2B/Math/pollard_rho.cpp
 // But Tiagosf00 is a member of my ICPC team so it's ok!
