@@ -31,18 +31,18 @@ namespace vigenere { // {{{
     // ~1.57MB
     constexpr int CHUNK_SIZE = 3 * (1 << 19);
 
-    // Cipher a chunk of a buffer {{{
-    void cipher_chunk(RollingKey& key, vector<byte_t>& buf) {
+    // Cypher a chunk of a buffer {{{
+    void cypher_chunk(RollingKey& key, vector<byte_t>& buf) {
         for (auto& byte : buf)
             byte ^= key.next();
     }
     // }}}
 
-    // Cipher the message in chunks {{{
+    // Cypher the message in chunks {{{
     // The input and output files are encoded/decoded in base64
     // when appropriate (TODO:)
-    void cipher_file(
-        const vector<byte_t>& key, FILE* fmessage, FILE* fcipher,
+    void cypher_file(
+        const vector<byte_t>& key, FILE* fmessage, FILE* fcypher,
         bool b64_input, bool b64_output
     ) {
         
@@ -61,8 +61,8 @@ namespace vigenere { // {{{
                 std::swap(buffer, b64_buf);
             }
 
-            // Apply vigenere cipher to the current chunk
-            cipher_chunk(rolling_key, buffer);
+            // Apply vigenere cypher to the current chunk
+            cypher_chunk(rolling_key, buffer);
 
             // Encode base 64 output, if necessary
             if (b64_output) {
@@ -70,8 +70,8 @@ namespace vigenere { // {{{
                 std::swap(buffer, b64_buf);
             }
 
-            // Write to output/cipher file
-            fwrite(buffer.data(), sizeof(*buffer.data()), buffer.size(), fcipher);
+            // Write to output/cypher file
+            fwrite(buffer.data(), sizeof(*buffer.data()), buffer.size(), fcypher);
 
             // Make sure the buffer is big enough for the
             // next iteration

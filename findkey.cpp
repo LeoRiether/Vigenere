@@ -69,11 +69,11 @@ Args parse_args(int argc, char* argv[]) {
 
 // KeyFinder {{{
 struct KeyFinder {
-    const vector<byte_t>& cipher;
+    const vector<byte_t>& cypher;
     const score_table_t& scoring;
 
-    KeyFinder(const vector<byte_t>& _cipher, const score_table_t& _scoring)
-        : cipher(_cipher), scoring(_scoring) {}
+    KeyFinder(const vector<byte_t>& _cypher, const score_table_t& _scoring)
+        : cypher(_cypher), scoring(_scoring) {}
 
     // Finds the k most likely key lengths {{{
     // Excludes lengths < th
@@ -85,10 +85,10 @@ struct KeyFinder {
         map<byte3, int> last_occurence;
         unordered_map<int, int> deltas;
         unordered_map<int, vector<long long>> divisor_cache;
-        int n = cipher.size();
+        int n = cypher.size();
         byte3 s;
         for (int i = 0; i+2 < n; i++) {
-            s = { cipher[i], cipher[i+1], cipher[i+2] };
+            s = { cypher[i], cypher[i+1], cypher[i+2] };
 
             if (last_occurence.count(s)) {
                 int delta = i - last_occurence[s];
@@ -146,10 +146,10 @@ struct KeyFinder {
         vector<long long> score;
         for (int i = 0; i < k; i++) {
             score.assign(256, 0);
-            int n = cipher.size();
+            int n = cypher.size();
             for (int j = i; j < n; j += k) {
                 for (int candidate = 0; candidate < 256; candidate++) {
-                    byte_t b = cipher[j] ^ candidate;
+                    byte_t b = cypher[j] ^ candidate;
                     if (b >= 'a' && b <= 'z')
                         b = b - 'a' + 'A';
 
@@ -174,8 +174,8 @@ int main(int argc, char* argv[]) {
     Args args = parse_args(argc, argv);
     assert(args.input && "--input flag must be present");
 
-    vector<byte_t> cipher = read_all_bytes(args.input);
-    KeyFinder findkey(cipher, english_score);
+    vector<byte_t> cypher = read_all_bytes(args.input);
+    KeyFinder findkey(cypher, english_score);
 
     // Find most likely key lengths {{{
     std::cerr << "Most likely lengths: ";
