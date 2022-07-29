@@ -1,14 +1,4 @@
 
 bin/
-tex/*.aux
-tex/*.fdb_latexmk
-tex/*.fls
-tex/*.log
-tex/*.bcf
-tex/*.run.xml
-tex/*.synctex.gz
-tex/*.bbl
-tex/*.blg
-tex/*.out
-tex/*.out
+tex/texbin
 
