@@ -1,0 +1,128 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[breaklinks]{hyperref}
+\usepackage{microtype}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Implementação e Ataque da Cifra de Vigenère}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Leonardo Alves Riether}
+\IEEEauthorblockA{\textit{Dep. Ciência da Computação} \\
+\textit{Universidade de Brasilia}\\
+Brasília, Brasil \\
+190032413@aluno.unb.br}
+}
+
+\maketitle
+
+\begin{abstract}
+    \cite{teste}
+This document is a model and instructions for \LaTeX.
+This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
+or Math in Paper Title or Abstract.
+\end{abstract}
+
+\begin{IEEEkeywords}
+component, formatting, style, styling, insert
+\end{IEEEkeywords}
+
+\section{Introdução}
+
+\section{Estruturação do Projeto}
+Neste trabalho, foi implementado um codificador e decodificador da cifra de
+Vigenère em C++. O projeto foi compilado com GCC 12.1.0 e testado em Linux , mas
+em princípio pode ser compilado em qualquer sistema com GCC que suporte C++17 e
+executado tanto em sistemas baseados em Unix quanto no Windows. 
+
+O projeto foi dividido em três partes:
+
+\begin{enumerate}
+    \item \textbf{main:} onde estão implementadas as funcionalidades de cifração
+        e decifração da cifra de Vigenère, dada uma chave (ou arquivo de chave).
+        Esse módulo é explicado na seção \ref{sec:implementation} e pode ser
+        compilado com o comando \verb|make main|.
+    \item \textbf{findkey:} onde está implementada a função de ataque da
+        cifra de Vigenère, que encontra uma chave automaticamente, dada uma
+        mensagem cifrada. Esse módulo é explicado na seção \ref{sec:attack} e
+        pode ser compilado com o comando \verb|make findkey|. 
+    \item \textbf{test:} possui alguns, poucos, testes, que podem ser executados
+        com o comando \verb|make test|.
+\end{enumerate}
+
+\section{Implementação}
+\label{sec:implementation}
+
+\subsection{Operação de Mescla da Mensagem com a Chave}
+Tradicionalmente, na cifra de Vigenère cada letra da mensagem é "mesclada" com
+uma da chave, por meio da soma módulo 26 dos valores das letras (geralmente, o
+valor de A é 0, o de B é 1, e assim por diante). Essa abordagem é interessante
+quando se deseja cifrar texto, por sua simplicidade de implementação. No
+entanto, existem algumas desvantagems:
+
+\begin{itemize}
+    \item Espaços e pontuação não são cifrados, portanto é fácil descobrir o tamanho de cada
+        palavra.
+    \item É mais difícil cifrar imagens, vídeos e arquivos binários que existem
+        hoje em dia.
+    \item Existem apenas 26 possibilidades para cada letra da mensagem
+\end{itemize}
+
+Dado isso, neste trabalho foi implementada uma variação da cifra de Vigenère
+tradicional, que utiliza a operação de \textbf{xor bit-a-bit} entre cada byte da mensagem
+e da chave. Com isso, é mais difícil descobrir o tamanho das palavras de um
+texto cifrado, é possível cifrar qualquer tipo de arquivo, e existem 256
+possibilidades para cada byte da chave, tornando essa cifra um pouco mais
+difícil de quebrar.
+
+\subsection{Codificação em Base 64}
+\label{sec:base64}
+Uma desvantagem de utilizar o xor é que o arquivo cifrado pode conter caracteres
+ilegíveis. Para manter uma certa compatibilidade com a cifra de Vigenère
+implementada com soma módulo 26, foi implementado um codificador e decodificador
+de base 64. Os arquivos cifrados e codificados em base 64 utilizam apenas
+caracteres legíveis, em troca de um aumento de aproximadamente 33\% do tamanho
+do arquivo.
+
+\subsection{Argumentos de Linha de Comando}
+Para a execução do programa, após compilar com \verb|make main|, [TODO].
+
+\section{Ataque}
+\label{sec:attack}
+
+
+\section{Conclusão}
+\label{sec:conclusion}
+
+% \begin{table}[htbp]
+% \caption{Table Type Styles}
+% \begin{center}
+% \begin{tabular}{|c|c|c|c|}
+% \hline
+% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
+% \cline{2-4} 
+% \textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\textit{Subhead}}& \textbf{\textit{Subhead}} \\
+% \hline
+% copy& More table copy$^{\mathrm{a}}$& &  \\
+% \hline
+% \multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
+% \end{tabular}
+% \label{tab1}
+% \end{center}
+% \end{table}
+
+% \bibliographystyle{IEEEtran}
+\bibliographystyle{plain}
+\bibliography{bib.bib}
+
+\end{document}
+
