@@ -27,11 +27,17 @@ using std::map;
 
 // Arg parser {{{
 struct Args {
-    char* input; // -i --input
+    char* input;  // -i --input
     char* output; // -o --output
-    int lengths; // -l --lengths
-    int min; // -min (minimum key length)
-    int max; // -max (maximum key length)
+    int lengths;  // -l --lengths
+    int min;      // -min (minimum key length)
+    int max;      // -max (maximum key length)
+
+    enum ScoreType {
+        english,    // --english
+        portuguese, // --portuguese
+        image,      // --image
+    } score_type;
 };
 
 #define IS(x, y) strcmp(x, y) == 0
@@ -40,6 +46,7 @@ Args parse_args(int argc, char* argv[]) {
     a.lengths = 10;
     a.min = 0;
     a.max = std::numeric_limits<int>::max();
+    a.score_type = Args::english;
     for (int i = 1; i < argc; i++) {
         if (IS(argv[i], "-i") || IS(argv[i], "--input")) {
             assert(i+1 < argc && "--input should be followed by a filename ");
@@ -60,6 +67,15 @@ Args parse_args(int argc, char* argv[]) {
         else if (IS(argv[i], "-max")) {
             assert(i+1 < argc && "-max should be followed by a number");
             a.max = atoi(argv[++i]);
+        }
+        else if (IS(argv[i], "--english")) {
+            a.score_type = Args::english;
+        }
+        else if (IS(argv[i], "--portuguese")) {
+            a.score_type = Args::portuguese;
+        }
+        else if (IS(argv[i], "--image")) {
+            a.score_type = Args::image;
         }
     }
     return a;
@@ -174,8 +190,13 @@ int main(int argc, char* argv[]) {
     Args args = parse_args(argc, argv);
     assert(args.input && "--input flag must be present");
 
+    auto table =
+        args.score_type == Args::english    ? english_score :
+        args.score_type == Args::portuguese ? portuguese_score :
+                                              image_score;
+
     vector<byte_t> cypher = read_all_bytes(args.input);
-    KeyFinder findkey(cypher, english_score);
+    KeyFinder findkey(cypher, table);
 
     // Find most likely key lengths {{{
     std::cerr << "Most likely lengths: ";

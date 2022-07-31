@@ -1,7 +1,10 @@
+% Vimtex is great, but damn, running LaTeX locally is such a pain
+
 \documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+% \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
-\usepackage{cite}
+% \usepackage{cite}
+\usepackage[portuguese]{babel}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
@@ -9,6 +12,7 @@
 \usepackage{xcolor}
 \usepackage[breaklinks]{hyperref}
 \usepackage{microtype}
+\usepackage{natbib}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -16,7 +20,7 @@
 
 \title{Implementação e Ataque da Cifra de Vigenère}
 
-\author{\IEEEauthorblockN{1\textsuperscript{st} Leonardo Alves Riether}
+\author{\IEEEauthorblockN{Leonardo Alves Riether}
 \IEEEauthorblockA{\textit{Dep. Ciência da Computação} \\
 \textit{Universidade de Brasilia}\\
 Brasília, Brasil \\
@@ -26,19 +30,21 @@ Brasília, Brasil \\
 \maketitle
 
 \begin{abstract}
-    \cite{teste}
+    \cite{englishfrequency}
 This document is a model and instructions for \LaTeX.
 This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
 or Math in Paper Title or Abstract.
 \end{abstract}
 
 \begin{IEEEkeywords}
-component, formatting, style, styling, insert
+    cifra, Vigenère, criptografia, xor
 \end{IEEEkeywords}
 
-\section{Introdução}
+\section{Introdução} % {{{
 
-\section{Estruturação do Projeto}
+% }}}
+
+\section{Estruturação do Projeto} % {{{
 Neste trabalho, foi implementado um codificador e decodificador da cifra de
 Vigenère em C++. O projeto foi compilado com GCC 12.1.0 e testado em Linux , mas
 em princípio pode ser compilado em qualquer sistema com GCC que suporte C++17 e
@@ -59,11 +65,17 @@ O projeto foi dividido em três partes:
         com o comando \verb|make test|.
 \end{enumerate}
 
-\section{Implementação}
+Os comandos \verb|make| geram executáveis dentro do diretório \verb|bin|, por
+exemplo \verb|bin/main| e \verb|bin/findkey|. Instruções mais detalhadas para a
+execução do \verb|main| e \verb|findkey| podem ser encontradas nas seções
+\ref{sec:exec-main} e \ref{sec:exec-attack}, respectivamente.  
+% }}}
+
+\section{Implementação} % {{{
 \label{sec:implementation}
 
-\subsection{Operação de Mescla da Mensagem com a Chave}
-Tradicionalmente, na cifra de Vigenère cada letra da mensagem é "mesclada" com
+\subsection{Operação de Combinação da Mensagem com a Chave}
+Tradicionalmente, na cifra de Vigenère cada letra da mensagem é "combinada" com
 uma da chave, por meio da soma módulo 26 dos valores das letras (geralmente, o
 valor de A é 0, o de B é 1, e assim por diante). Essa abordagem é interessante
 quando se deseja cifrar texto, por sua simplicidade de implementação. No
@@ -93,15 +105,165 @@ de base 64. Os arquivos cifrados e codificados em base 64 utilizam apenas
 caracteres legíveis, em troca de um aumento de aproximadamente 33\% do tamanho
 do arquivo.
 
-\subsection{Argumentos de Linha de Comando}
-Para a execução do programa, após compilar com \verb|make main|, [TODO].
+\subsection{Execução do Programa}
+\label{sec:exec-main}
+Após compilação do programa com \verb|make main|, é possível executá-lo com
+alguns argumentos de linha de comando:
 
-\section{Ataque}
+\begin{itemize}
+    \item \textbf{-k} \textbf{--key}: Especifica uma string que será usada como
+        chave da cifra.
+    \item \textbf{-kf} \textbf{--key-file}: Espefifica um arquivo cujo conteúdo
+        será usado como chave.
+    \item \textbf{-i} \textbf{--input}: Determina qual o arquivo de mensagem (ou
+        input). Se essa opção não for especificada, é utilizada a entrada padrão
+        (stdin).
+    \item \textbf{-o} \textbf{--output}: Determina qual o arquivo de cifra (ou
+        output). Se essa opção não for especificada, é utilizada a saída padrão
+        (stdout).
+    \item \textbf{-i64} (\textit{resp.} \textbf{-o64}): Flag que, se usadas,
+        indica que a entrada (\textit{resp.} saída) está codificada em base 64.
+\end{itemize}
+
+É necessário especificar uma chave, por meio de um argumento \textbf{-k} ou
+\textbf{-kf}.
+
+% }}}
+
+\section{Ataque} % {{{
 \label{sec:attack}
 
+\subsection{Ideia}
+É impossível projetar um ataque "universal" à cifra de Vigenère, visto que uma
+mensagem aleatória, quando cifrada com uma chave qualquer, gera texto cifrado
+aleatório. Esse caso é semelhante à aplicação de um one time
+pad\cite{one-time-pad}, que é matematicamente "inquebrável", se usado corretamente.
 
-\section{Conclusão}
+Apesar disso, se a mensagem tiver alguma propriedade que conhecemos a priori, a
+cifra de Vigenère pode ser quebrada. Assim, nessa seção consideraremos que a
+mensagem cifrada é um texto relativamente longo, escrito em português ou inglês.
+O ataque descrito também se aplica a outras línguas, mas focamos nessas duas.
+Duas propriedades importantes de textos em português e inglês são:
+\begin{enumerate}
+    \item A grande maioria dos bytes é legível, diferentemente de arquivos de
+        imagens ou executáveis.
+    \item É esperado que as frequências dos caracteres sigam uma distribuição
+        similar a outros textos escritos na mesma língua.
+\end{enumerate}
+
+Sabendo disso, podemos elaborar uma estratégia para encontrar uma chave
+provável, dado um texto cifrado e a informação da língua em que a mensagem foi
+escrita. A estratégia é dividida em três partes: encontrar o tamanho da chave,
+encontrar a chave mais provável de um determinado tamanho, e por fim escolher a
+chave com maior probabilidade de estar correta. Essas partes são explicadas nas
+subseções \ref{sec:tamanhos}, \ref{sec:pontuacao}, \ref{sec:escolha}.
+
+\subsection{Encontrando Tamanhos de Chave Mais Prováveis}
+\label{sec:tamanhos}
+
+Em textos grandes, é bem provável que certas algumas combinações de caracteres
+se repitam frequentemente. Por exemplo, em inglês, o trigrama \textit{"the"}
+provavelmente aparece muitas vezes. Nas vezes que um trigrama se repete na
+mensagem e, por acaso, é cifrado com os mesmos índices da chave, o trigrama
+cifrado também se repete!
+
+Utilizamos esse fato para encontrar os tamanhos de chave mais prováveis com um
+esquema de pontuação dos tamanhos. Primeiro, computamos a distância entre todas
+as repetições de trigramas da cifra. Se uma repetição tem distância $\Delta $,
+adicionamos um ponto a todos os divisores de $\Delta $. Por último, ordenamos os
+inteiros com base em sua pontuação.
+
+Um detalhe de implementação interessante é o algoritmo usado para encontrar os
+divisores de um número. Nesse trabalho, foi utilizado o algoritmo de Pollard-Rho
+\cite{pollard-rho}. A implementação foi retirada de \cite{pollard-rho-tiago}.
+
+Esse método é chamado de Eliminação de Kasiski e é explicado em mais detalhes em
+\cite{kasiski}.
+
+\subsection{Função de Pontuação}
+\label{sec:pontuacao}
+Por meio da Eliminação de Kasiski, obtemos uma lista de tamanhos prováveis para
+a chave. Agora, veremos como, dado um tamanho de chave $K$, obter a "melhor"
+chave com tamanho $K$. Para determinar qual chave é "melhor" ou "pior",
+definimos uma função de pontuação $P(C)$ que recebe uma chave e atribui a ela um
+número. Quanto mais provável a chave, maior deve ser sua pontuação. 
+
+Nesse ponto, notamos que, para uma chave de tamanho $K$, se dois índices $i, j$ da
+mensagem são congruentes módulo $K$, eles foram cifrados com o mesmo byte da
+chave. Sendo assim, podemos particionar os índices em classes de equivalência
+módulo $K$ e pontuar cada classe separadamente.
+
+Um modo de pontuar uma classe é comparar sua tabela de frequências com a tabela
+esperada da língua. Como 
+
+\begin{table}[htbp]
+\caption{Frequência das Letras em Textos escritos em Inglês}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+    Letra & Frequência & Letra & Frequência \\
+\hline
+    E & 11.1607\% & M & 3.0129\% \\
+    A & 8.4966\% & H & 3.0034\% \\
+    R & 7.5809\% & G & 2.4705\% \\
+    I & 7.5448\% & B & 2.0720\% \\
+    O & 7.1635\% & F & 1.8121\% \\
+    T & 6.9509\% & Y & 1.7779\% \\
+    N & 6.6544\% & W & 1.2899\% \\
+    S & 5.7351\% & K & 1.1016\% \\
+    L & 5.4893\% & V & 1.0074\% \\
+    C & 4.5388\% & X & 0.2902\% \\
+    U & 3.6308\% & Z & 0.2722\% \\
+    D & 3.3844\% & J & 0.1965\% \\
+    P & 3.1671\% & Q & 0.1962\% \\
+\hline
+\end{tabular}
+\label{tab:englishfrequency}
+\end{center}
+\end{table}
+
+% De modo similar, um texto escrito em português tende a ter uma distribuição de
+% frequências similar à da tabela apresentada em \ref{tab:portuguesefrequency},
+% vista em \cite{wiki:portuguese-frequency}.
+
+\begin{table}[htbp]
+\caption{Frequência das Letras em Textos escritos em Português}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+    Letra & Frequência & Letra & Frequência \\
+\hline
+    A & 14.63\% & B & 1.04\% \\
+    C & 3.88\% & D & 4.99\% \\
+    E & 12.57\% & F & 1.02\% \\
+    G & 1.30\% & H & 1.28\% \\
+    I & 6.18\% & J & 0.40\% \\
+    K & 0.02\% & L & 2.78\% \\
+    M & 4.74\% & N & 5.05\% \\
+    O & 10.73\% & P & 2.52\% \\
+    Q & 1.20\% & R & 6.53\% \\
+    S & 7.81\% & T & 4.34\% \\
+    U & 4.63\% & V & 1.67\% \\
+    W & 0.01\% & X & 0.21\% \\
+    Y & 0.01\% & Z & 0.47\% \\
+\hline
+\end{tabular}
+\label{tab:portuguesefrequency}
+\end{center}
+\end{table}
+
+\subsection{Escolha da Chave Mais Provável}
+\label{sec:escolha}
+
+\subsection{Execução do Programa de Ataque}
+\label{sec:exec-attack}
+
+% }}}
+
+\section{Conclusão} % {{{
 \label{sec:conclusion}
+
+% }}}
 
 % \begin{table}[htbp]
 % \caption{Table Type Styles}
@@ -121,8 +283,8 @@ Para a execução do programa, após compilar com \verb|make main|, [TODO].
 % \end{table}
 
 % \bibliographystyle{IEEEtran}
-\bibliographystyle{plain}
-\bibliography{bib.bib}
+\bibliographystyle{unsrtnat}
+\bibliography{bib}
 
 \end{document}
 
