@@ -124,14 +124,24 @@ texto cifrado, é possível cifrar qualquer tipo de arquivo, e existem 256
 possibilidades para cada byte da chave, tornando essa cifra um pouco mais
 difícil de quebrar.
 
+Note que, como todo elemento é inverso dele mesmo sob a operação de xor, a
+função de cifração é idêntica à de decifração.
+
 \subsection{Codificação em Base 64}
 \label{sec:base64}
 Uma desvantagem de utilizar o xor é que o arquivo cifrado pode conter caracteres
-ilegíveis. Para manter uma certa compatibilidade com a cifra de Vigenère
+ilegíveis. A figura \ref{fig:illegible} mostra o conteúdo de uma mensagem
+cifrada, ilegível. Para manter uma certa compatibilidade com a cifra de Vigenère
 implementada com soma módulo 26, foi implementado um codificador e decodificador
 de base 64. Os arquivos cifrados e codificados em base 64 utilizam apenas
 caracteres legíveis, em troca de um aumento de aproximadamente 33\% do tamanho
 do arquivo.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{img/ss2.jpg}}
+\caption{Arquivos cifrados ficam ilegíveis}
+\label{fig:illegible}
+\end{figure}
 
 \subsection{Execução do Programa}
 \label{sec:exec-main}
@@ -367,26 +377,28 @@ decifração utilizando a chave prevista pelo ataque, é mostrada na figura
 
 \section{Conclusão} % {{{
 \label{sec:conclusion}
+Neste trabalho, foi introduzida uma cifra de Vigenère modificada para utilizar
+xor bit-a-bit entre os bytes da mensagem e da chave. Essa cifra pode ser
+utilizada em qualquer tipo de arquivo digital, ao contrário da cifra tradicional
+com soma módulo 26. Foram explicados também alguns detalhes da implementação em
+C++ do algoritmo descrito.
 
--- imagem não tem ataque
+Além disso, foi detalhada uma maneira de quebrar a cifra citada anteriormente,
+de modo que é possível descobrir automaticamente qual chave foi utilizada para
+cifrar um texto, desde que a mensagem original seja escrita em inglês ou
+português, e tenha tamnho consideravelmente maior que o da chave. O ataque se
+baseia na atribuição de pontuações a diferentes chaves, para fins de decidir
+qual chave possui maior probabilidade de estar correta. As pontuações, por sua
+vez, se baseiam em tabelas de frequência esperadas para um texto escrito na
+língua correspondente.
+
+O ataque mostrado depende das tabelas de frequência, que são muito pouco
+uniformes. Não foi encontrado um método satisfatório para o ataque de imagens
+cifradas com Vigenère, dado que arquivos de imagens possuem propriedades muito
+diferentes de arquivos de texto. É possível, no entanto, que existam algoritmos
+capazes de descobrir a chave nesse caso.
+
 % }}}
-
-% \begin{table}[htbp]
-% \caption{Table Type Styles}
-% \begin{center}
-% \begin{tabular}{|c|c|c|c|}
-% \hline
-% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-% \cline{2-4} 
-% \textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\teu conseextit{Subhead}}& \textbf{\textit{Subhead}} \\
-% \hline
-% copy& More table copy$^{\mathrm{a}}$& &  \\
-% \hline
-% \multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
-% \end{tabular}
-% \label{tab1}
-% \end{center}
-% \end{table}
 
 % \bibliographystyle{IEEEtran}
 \bibliographystyle{unsrtnat}
