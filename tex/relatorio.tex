@@ -31,10 +31,7 @@ Brasília, Brasil \\
 \maketitle
 
 \begin{abstract}
-    \cite{englishfrequency}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+    If you're reading this I forgot to write an abstract
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -42,6 +39,17 @@ or Math in Paper Title or Abstract.
 \end{IEEEkeywords}
 
 \section{Introdução} % {{{
+Uma maneira simples de cifrar uma mensagem é utilizar a cifra de Vigenère, que
+foi criada em 1553 por Giovan Battista Bellaso, e só foi quebrada em 1863. O
+método consiste, tradicionalmente, em sobrepor uma mensagem com uma chave
+repetida diversas vezes (até que o tamanho da chave se iguale ao da mensagem) e
+somar os valores das letras sobrepostas módulo 26.
+
+Neste trabalho, foi desenvolvido um programa que possibilita a cifração e
+decifração de uma mensagem com uma cifra de Vigenère modificada, que é
+descrito na seção \ref{sec:implementation}. Além disso, é descrito um método de
+ataque à cifra, que tenta automaticamente descobrir a chave com a qual um texto
+foi cifrado, na seção \ref{sec:attack}.
 
 % }}}
 
@@ -70,6 +78,19 @@ Os comandos \verb|make| geram executáveis dentro do diretório \verb|bin|, por
 exemplo \verb|bin/main| e \verb|bin/findkey|. Instruções mais detalhadas para a
 execução do \verb|main| e \verb|findkey| podem ser encontradas nas seções
 \ref{sec:exec-main} e \ref{sec:exec-attack}, respectivamente.  
+
+Os principais arquivos a serem analisados são os seguintes:
+\begin{itemize}
+    \item \textbf{main.cpp}: a maior parte desse arquivo é boilerplate para
+        chamar as funções de cifração e decifração do módulo \textbf{main}.
+    \item \textbf{vigenere.cpp}: possui a implementação das funções de cifração
+        e decifração.
+    \item \textbf{findkey.cpp}: onde está implementada a função de ataque à
+        cifra.
+    \item \textbf{scoring.cpp}: possui tabelas de pontuação, que serão
+        explicadas na seção \ref{sec:attack}.
+\end{itemize}
+
 % }}}
 
 \section{Implementação} % {{{
@@ -172,6 +193,12 @@ escrita. A estratégia consiste no seguinte algoritmo:
 \end{enumerate}
 
 Cada parte desse algoritmo é descrito em mais detalhes nas próximas subseções.  
+
+Observe que uma chave de tamanho $K$ particiona a cifra em $K$ classes de
+equivalência, e que cada classe precisa de um número grande de bytes para que o
+ataque tenha maior chance de funcionar. Assim, quanto maior a razão entre
+tamanho da mensagem e tamanho da chave, maior a probabilidade do ataque ser bem
+sucedido.
 
 \subsection{Encontrando Tamanhos de Chave Mais Prováveis}
 \label{sec:tamanhos}
@@ -319,6 +346,16 @@ executar \verb|bin/findkey| com alguns argumentos de linha de comando:
     \item \textbf{--english} ou \textbf{--portuguese}: indicam qual tabela de
         frequências deve ser utilizada para pontuar as chaves.
 \end{itemize}
+
+Um exemplo da execução da cifração, seguido de um ataque, e por último
+decifração utilizando a chave prevista pelo ataque, é mostrada na figura
+\ref{fig:example}.
+
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=\linewidth]{img/ss1.jpg}}
+\caption{Exemplo de Execução}
+\label{fig:example}
+\end{figure}
 
 % }}}
 
