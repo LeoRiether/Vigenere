@@ -13,6 +13,7 @@
 \usepackage[breaklinks]{hyperref}
 \usepackage{microtype}
 \usepackage{natbib}
+\usepackage{listings}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -136,8 +137,9 @@ alguns argumentos de linha de comando:
 \subsection{Ideia}
 É impossível projetar um ataque "universal" à cifra de Vigenère, visto que uma
 mensagem aleatória, quando cifrada com uma chave qualquer, gera texto cifrado
-aleatório. Esse caso é semelhante à aplicação de um one time
-pad\cite{one-time-pad}, que é matematicamente "inquebrável", se usado corretamente.
+aleatório. Esse caso é semelhante à aplicação de um one time pad
+(\cite{one-time-pad}), que é matematicamente "inquebrável", se usado
+corretamente.
 
 Apesar disso, se a mensagem tiver alguma propriedade que conhecemos a priori, a
 cifra de Vigenère pode ser quebrada. Assim, nessa seção consideraremos que a
@@ -153,10 +155,23 @@ Duas propriedades importantes de textos em português e inglês são:
 
 Sabendo disso, podemos elaborar uma estratégia para encontrar uma chave
 provável, dado um texto cifrado e a informação da língua em que a mensagem foi
-escrita. A estratégia é dividida em três partes: encontrar o tamanho da chave,
-encontrar a chave mais provável de um determinado tamanho, e por fim escolher a
-chave com maior probabilidade de estar correta. Essas partes são explicadas nas
-subseções \ref{sec:tamanhos}, \ref{sec:pontuacao}, \ref{sec:escolha}.
+escrita. A estratégia consiste no seguinte algoritmo:
+
+\begin{enumerate}
+    \item Encontrar os tamanhos mais prováveis para a chave.
+    \item Para cada tamanho $K$:
+        \begin{enumerate}
+            \item Separamos os índices da cifra em classes de equivalência
+                módulo $K$.
+            \item Para cada classe de equivalência, geramos o byte que produz
+                maior pontuação, de acordo com uma tabela de frequências. 
+            \item A pontuação para a chave de tamanho $K$ gerada é a soma das
+                pontuações de cada classe de equivalência.
+        \end{enumerate}
+    \item A saída é a chave com maior pontuação
+\end{enumerate}
+
+Cada parte desse algoritmo é descrito em mais detalhes nas próximas subseções.  
 
 \subsection{Encontrando Tamanhos de Chave Mais Prováveis}
 \label{sec:tamanhos}
@@ -180,21 +195,39 @@ divisores de um número. Nesse trabalho, foi utilizado o algoritmo de Pollard-Rh
 Esse método é chamado de Eliminação de Kasiski e é explicado em mais detalhes em
 \cite{kasiski}.
 
-\subsection{Função de Pontuação}
+\subsection{Geração de uma Chave de Tamanho K}
 \label{sec:pontuacao}
 Por meio da Eliminação de Kasiski, obtemos uma lista de tamanhos prováveis para
-a chave. Agora, veremos como, dado um tamanho de chave $K$, obter a "melhor"
-chave com tamanho $K$. Para determinar qual chave é "melhor" ou "pior",
-definimos uma função de pontuação $P(C)$ que recebe uma chave e atribui a ela um
+a chave. Agora, veremos como, dado um tamanho de chave $K$, obter a ``melhor``
+chave com tamanho $K$. Para determinar qual chave é ``melhor`` ou ``pior``,
+definimos uma função de pontuação que recebe uma chave e atribui a ela um
 número. Quanto mais provável a chave, maior deve ser sua pontuação. 
 
 Nesse ponto, notamos que, para uma chave de tamanho $K$, se dois índices $i, j$ da
 mensagem são congruentes módulo $K$, eles foram cifrados com o mesmo byte da
 chave. Sendo assim, podemos particionar os índices em classes de equivalência
-módulo $K$ e pontuar cada classe separadamente.
+módulo $K$ e encontrar cada byte da chave separadamente.
 
-Um modo de pontuar uma classe é comparar sua tabela de frequências com a tabela
-esperada da língua. Como 
+Um modo de encontrar um byte da chave para uma classe de equivalência é testar
+todas as possibilidades para o byte e comparar as tabelas de frequências com a tabela
+esperada da língua. Essa comparação é mais fácil na cifra de Vigenère com soma
+módulo 26, porém mais difícil com a cifra baseada em xor bit-a-bit, visto que
+teríamos que gerar uma tabela com a frequência de espaços, pontuação e outros
+símbolos que podem aparecer na mensagem. Por conta disso, é proposto outro modo
+de pontuar a classe, baseada em ideias de \cite{breaking-the-cipher}.
+
+Utilizando as tabelas esperadas de frequência de textos em inglês e português,
+mostradas respectivamente em \ref{tab:englishfrequency} e
+\ref{tab:portuguesefrequency}, executamos o algoritmo que é mostrado em
+pseudocódigo em \ref{code:idk}. A variável \verb|tabela| associa os valores
+ascii das letras às suas respectivas frequências na língua adequada, os demais
+bytes possuem valor zero na tabela.
+
+Em poucas palavras, esse algoritmo itera pelos possíveis valores de
+\verb|chave[i]|, decodifica a cifra com cada valor e pontua com base nos valores
+da tabela para os bytes decifrados. Após isso, o byte que produziu o maior score
+é escolhido. Como a tabela é baseada na frequência esperada dos caracteres,
+espera-se que o caracter real da chave maximize a pontuação.
 
 \begin{table}[htbp]
 \caption{Frequência das Letras em Textos escritos em Inglês}
@@ -222,10 +255,6 @@ esperada da língua. Como
 \end{center}
 \end{table}
 
-% De modo similar, um texto escrito em português tende a ter uma distribuição de
-% frequências similar à da tabela apresentada em \ref{tab:portuguesefrequency},
-% vista em \cite{wiki:portuguese-frequency}.
-
 \begin{table}[htbp]
 \caption{Frequência das Letras em Textos escritos em Português}
 \begin{center}
@@ -252,11 +281,44 @@ esperada da língua. Como
 \end{center}
 \end{table}
 
+\begin{lstlisting}[language=Python, caption=Cálculo da pontuação para um tamanho
+de chave K]
+# K = tamanho da chave
+# M = tamanho da mensagem
+for i in range(K): # classe de equivalencia
+  score = [0] * 256 # lista com 256 zeros
+  for x in range(256):
+    for j in range(i, M, K):
+      # (^) representa o xor bit-a-bit
+      score[x] += tabela[mensagem[j] ^ x]
+  chave[i] = max_index(score)
+\end{lstlisting}
+\label{code:idk}
+
 \subsection{Escolha da Chave Mais Provável}
 \label{sec:escolha}
+Após a geração de várias chaves com tamanhos diferentes, cada uma terá uma
+pontuação, que é dada pela soma das pontuações de cada um de seus bytes. Com
+isso, podemos dizer que a chave com maior pontuação total é a mais provável, e
+será a saída do programa de ataque desenvolvido. 
 
 \subsection{Execução do Programa de Ataque}
 \label{sec:exec-attack}
+
+Após compilação do programa de ataque com \verb|make findkey|, é possível
+executar \verb|bin/findkey| com alguns argumentos de linha de comando:
+
+\begin{itemize}
+    \item \textbf{-i} \textbf{--input}: arquivo de entrada cifrado.
+    \item \textbf{-o} \textbf{--output}: arquivo de saída, que conterá a chave
+        gerada.
+    \item \textbf{-l} \textbf{--lengths}: determina a quantidade de tamanhos de
+        chaves testados.
+    \item \textbf{-min} (\textit{resp.} \textbf{-max}): tamanho mínimo (
+        \textit{resp.} máximo) das chaves a serem testadas.
+    \item \textbf{--english} ou \textbf{--portuguese}: indicam qual tabela de
+        frequências deve ser utilizada para pontuar as chaves.
+\end{itemize}
 
 % }}}
 
